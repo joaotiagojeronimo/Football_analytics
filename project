@@ -1,0 +1,202 @@
+## Football and Data Analytics
+
+#### Introduction to the theme 
+#In this project I will explore the influence of data analytics. It has grown in every area of our lives over the last two decades: in companies of all kinds, 
+#but also in sports. Football was supposed to be resilient to this pattern until a few years ago. Early adopters in the major football leagues are already 
+#booming as a result of the strategic edge that data mining investments is providing. Liverpool, AZ Alkmaar, and Brentford are only a handful of the many promising
+#case studies. Clubs who do not plan to get on the analytics train, will be left behind.
+
+#### What is the business problem I will be addressing?
+#The main business problem I am looking forward to solving is whether supported by data (i.e statistics of a football match) the club can both obtain the desirable
+#position it aims and as a result improve its financial health. The higher you are ranked in your respective league the higher the probability of accessing the
+#millionaire leagues like Champions and Europa league and thus improve your financials. 
+
+#In order to solve this problem, I will use the Football Data: Expected Goals and Other Metrics from Kaggle 
+#(https://www.kaggle.com/slehkyi/extended-football-stats-for-european-leagues-xg). This data set contains statistical summary data by the end of each season from
+#2014 to 2019 for 6 UEFA Leagues (La Liga, EPL, 
+
+## Storytelling
+#I was hired by Arsenal to better understand which statistics led to the championship and consequently improve the financial health of the club. Having done that I 
+#used a database called understat.com.csv to do the visualization of the impact of the statistics.  To develop my workproject for Arsenal I did some data exploration,
+#curation and cleaning so then I could show the most important plots. Then they could grasp easily the concepts I wanted to pass on to them. As we are all aware of 
+#by visualizing our conclusions it is way easier for the receiver(Arsenal staff) to percept the data more easily.
+
+import pandas as pd
+import numpy as np
+import csv
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib
+%matplotlib inline
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+data_understat = pd.read_csv('understat.com.csv')
+#We changed the names of columns 1 and 2
+data_understat = data_understat.rename(columns={'Unnamed: 0': 'League', 'Unnamed: 1': 'year'})
+data_understat.columns
+
+result = data_understat[(data_understat['position'] == 1)] 
+result.head()
+
+#all-year average
+result = result.groupby('League').mean()
+result.reset_index(inplace = True)
+result.drop('year', axis = 1, inplace = True)
+result.drop('position', axis = 1, inplace = True)
+result
+
+EPL_data = data_understat[data_understat['League'] == 'EPL']
+EPL_data.describe()
+
+## Arsenal performance over the years and the need of analytics to improve its results
+#I performed this first graph to demonstrate to the club that historically they have been declining and for instance in 2015 they managed to get the second place
+#and when comparing to 2019 they finished that championship in 8th place which for a club of this dimension is not acceptable. This was also another factor that 
+#led this english club to seek out for new solutions like data analysis in football performed by me.
+
+arsenal=data_understat[(data_understat['team']=='Arsenal')][['team','year','position']]
+arsenal.plot(x='year',y='position',label='Arsenal',color='r')
+plt.title("Arsenal's EPL last positions");
+
+EPL_2019 = data_understat[(data_understat['year']==2019)&(data_understat['League']=='EPL')]
+filter_top8= [1,2,3,4,5,6,7,8]
+EPL_2019_filtered = EPL_2019[EPL_2019['position'].isin(filter_top8)]
+EPL_2019_points = EPL_2019_filtered.groupby("team")[["pts", "xpts"]].sum()
+
+#Plot bar graphs of total pts and xpts for each team side-by-side
+EPL_2019_points=EPL_2019_points.sort_values("pts", ascending = False)
+EPL_2019_Xpoints=EPL_2019_points.sort_values("xpts", ascending = False)
+
+f, ax1 = plt.subplots(1, 1, figsize=(20, 10))
+plt.subplots_adjust(wspace = 0.7)
+sns.barplot(x="pts", y=EPL_2019_points.index, palette="rocket_r", data=EPL_2019_points, ax=ax1)
+ax1.set(title = ("Total Points Collected by top 8 EPL Teams in 2019"), xlabel=("Total Points"), ylabel=("Teams"), xlim=[0, 85]);
+
+#After understanding that the club was indeed loosing its status of being one of the big 5 in England, for us it was important to understand what and which were 
+#the variables that I should focus. By plotting this graphs I understand that some variables will be correlated and therefore I will not focus on them througout
+#our report for the club.
+
+corr = data_understat.corr()
+mask = np.zeros_like(corr, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+
+f, ax = plt.subplots(figsize=(11, 9))
+plt.title('Correlation between dataset variables')
+
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+
+sns.heatmap(
+    corr,           
+    cmap=cmap,    
+    annot=False,  
+    vmax=1,       
+    vmin=0,      
+    center=0,     
+    square=True,  
+    linewidths=.5,
+    cbar_kws={"shrink": .5})
+
+#After visualizing the correlation graph it was quite perceptible that there were some variables which were higly correlated. Correlation shows the strength of a
+#relationship between two variables and is expressed numerically by the correlation coefficient. The correlation coefficient's values range between 0 and 1.0. 
+#A perfect positive correlation means that the correlation coefficient is exactly 1. I will now give an example to clarify what I meant: the expected points(xpts)
+#is extremely correlated with the offensive possession(deep) meaning that generally teams which have more offensive possession end up winning games. By having this
+#information transmitted to Arsenal now the team can develop a strategy where it preferes more offensive approaches than counterattack approaches for instance.
+
+## Best offensive teams usually achieve higher positions
+#This representation is here to reflect the importance of being able to transform offensive opportunitie into goals. Basically the teams with higher effictiveness 
+#in scoring goals will be able to win more games and therefore be in the top positions. By knowing this offensive training with the players is of utter importance 
+#having into account the objective of Arsenal which is to dominate the EPL
+
+fig,ax = plt.subplots(figsize= (10,10*0.618))
+ax.set_xlabel('Positions')
+ax.set_ylabel('xG - Expected goals metric')
+plt.rcParams["font.size"] = 12
+plt.rcParams["font.size"] = 12
+lp = sns.lineplot(data=data_understat, x="position", y="xG", ax=ax);
+plt.title("Offensive has a key factor to winning points");
+plt.xticks(np.arange(1, 21, 1))
+plt.grid(alpha=0.3)
+plt.xlim(1,20);
+
+#xG - expected goals metric, it is a statistical measure of the quality of chances created and conceded
+
+EPL_data_2016to2019=EPL_data[(EPL_data['year']!=2014)&(EPL_data['year']!=2015)]
+EPL_data_2016to2019
+
+#In the following plot I want to highlight the importance of having offensive possession. As it is perceptible the teams which are in the Champions League
+#(the ones inside the rectangle) have a high value regarding this variable comparing to the ones who are in risk of relegation. These top 6 teams have at 
+#least 200 passes in the offensive end and the ones which are in the bottom have ususally less than that.
+
+from matplotlib.patches import Rectangle
+fig,ax = plt.subplots(figsize= (10,10*0.618))
+plt.rcParams["font.size"] = 15
+plt.rcParams["font.size"] = 15
+lp = sns.scatterplot(data=EPL_data_2016to2019, x="position", y="deep",color="0.1", ax=ax);
+plt.title("Offensive possession translate into higher positions");
+plt.xticks(np.arange(1, 21, 1))
+plt.grid(alpha=0.3)
+plt.xlim(0,21)
+re = Rectangle((0,0),6.5,600, facecolor="g", alpha=0.2)
+ax.add_patch(re);
+
+## Arsenal vs Liverpool: a closer look to the stats
+#Here I have three subplots where I compare the champion with Arsenal to better understand where Arsenal should focus its strategy.
+
+arsenal1=EPL_data[(EPL_data['team']=='Arsenal')][['team','position','xGA','scored','missed','deep_allowed']]
+liverpool1=EPL_data[(EPL_data['team']=='Liverpool')][['team','position','xGA','scored','missed','deep_allowed']]
+arsenal1
+
+liverpool1
+
+fig, sp = plt.subplots(2,3)
+fig.suptitle('Arsenal vs Liverpool', fontsize=16)
+
+sp[0][0].violinplot(arsenal1[['xGA']])
+sp[0][0].set_ylabel("Arsenal")
+
+sp[0][1].boxplot(arsenal1[["scored"]]);
+
+sp[0][2].violinplot(arsenal1[["deep_allowed"]]);
+
+sp[1][0].violinplot(liverpool1[["xGA"]])
+sp[1][0].set_xlabel("goals against")
+sp[1][0].set_ylabel("Liverpool")
+
+sp[1][1].boxplot(liverpool1[["scored"]]);
+sp[1][1].set_xlabel("goals scored")
+
+sp[1][2].violinplot(liverpool1[["deep_allowed"]]);
+sp[1][2].set_xlabel("offensive passes allowed")
+
+fig.tight_layout()
+fig.set_figheight(5)
+fig.set_figwidth(10)
+
+#So in the graphics on the left it is visble that Liverpool does not concede as much goals as Arsenal and so one main focus should be draft exercises to
+#foment a better defense. The middle graphs reflects the difference of number of goals scored that Liverpool surpasses by a margin of 10 goals Arsenal! 
+#Lastly the graphics on the right side shows that Liverpool is better defensively and so Arsenal need to be more agressive when defending.
+
+## Cross leagues comparison
+#Lastly as Arsenal usually enters in the European competitions either the Champions League or the Europe League it was also important to understand how the
+#different leagues differ from the EPL. I also used different colours in the graphs so as to know for instance that all the Bundesliga bars are all blue and
+#so it is easier to use a color system to distinguish the different leagues. 
+
+f, axs = plt.subplots(nrows=2, ncols=2, figsize = (20, 15))
+f.suptitle('Cross Leagues comparison', fontsize=30)
+sns.barplot(x = 'League', y='missed', data=result, ax = axs[0,0])
+sns.barplot(x = 'League', y='scored', data=result, ax = axs[0,1])
+sns.barplot(x = 'League', y='ppda_coef', data=result, ax = axs[1,0])
+sns.barplot(x = 'League', y='deep_allowed', data=result, ax = axs[1,1])
+plt.tight_layout()
+
+#In this four plots there are some variables compared and just to give an example if Arsenal is playing against Real Madrid which is from La Liga it will need to 
+#outline a paln to stop the offensive avalanche from this team as in this league the teams score a lot of goals.
+
+## Conclusions/Recommendations
+#1) If Arsenal wants to be a top team again it should focus on the most correlated metrics with wins and points. As a result the most important ones are the goals 
+#scored and goals against as well as offensive possession that usually translates into more goals
+#2) By improving some of the metics here mentioned Arsenal will manage to get more points and thus get direct entry to the international competitions and improve 
+#the results financially speaking.
+#3) I have some limnitations regarding our dataset because I do not know if to increase this metrics it is required investement in new players and that could 
+#cancel off the effect of achieving the positions of going to Champions League and therefore do not improve the financial health of the club 
+
